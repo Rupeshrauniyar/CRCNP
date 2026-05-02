@@ -11,21 +11,30 @@ export async function updateSession(request) {
 
   const response = NextResponse.next();
 
-  const supabase = createServerClient(url, anonKey, {
-    cookies: {
-      get(name) {
-        return request.cookies.get(name)?.value;
+  try {
+    const supabase = createServerClient(url, anonKey, {
+      cookies: {
+        get(name) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name, value, options) {
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          response.cookies.set({ name, value: "", ...options });
+        },
       },
-      set(name, value, options) {
-        response.cookies.set({ name, value, ...options });
-      },
-      remove(name, options) {
-        response.cookies.set({ name, value: "", ...options });
-      },
-    },
-  });
+    });
 
-  await supabase.auth.getUser();
+    const { error } = await supabase.auth.getUser();
+
+    if (error) {
+      console.error("Supabase error:", error.message);
+    }
+  } catch (err) {
+    console.error("Middleware error:", err);
+    return NextResponse.next();
+  }
 
   return response;
 }
